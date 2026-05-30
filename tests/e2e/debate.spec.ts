@@ -140,4 +140,62 @@ test.describe("debate viewer (P109.1)", () => {
       timeout: 30_000,
     });
   });
+
+  test("P109.2 — cancelled debate transitions UI to terminal state (no hang)", async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.goto("/debate");
+
+    // Start a debate so we have a live one to cancel
+    await page.locator("textarea").first().fill(`P109.2 cancel test — ${Date.now()}`);
+    await page.locator("textarea").nth(1).fill("placeholder");
+    await page.getByRole("button", { name: /Start debate/i }).click();
+    await page.waitForURL(/\/debate\/debate-/, { timeout: 15_000 });
+
+    // Wait for the live indicator + Cancel button to appear (debate is running)
+    await expect(page.getByRole("button", { name: /Cancel/i })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // Click Cancel — should fire POST /api/v1/debate/{id}/cancel,
+    // chimera emits `debate_cancelled` SSE, hook applies it, UI transitions
+    // to terminal "cancelled" state (Cancel button hidden, dot turns rose).
+    await page.getByRole("button", { name: /Cancel/i }).click();
+
+    // P109.2 fix: without the debate_cancelled handler the UI would hang.
+    // With it, the cancelled status appears within a few seconds.
+    await expect(page.locator("text=/^cancelled$/").first()).toBeVisible({
+      timeout: 60_000,
+    });
+
+    // And the Cancel button disappears (terminal=true)
+    await expect(page.getByRole("button", { name: /Cancel/i })).not.toBeVisible();
+  });
+
+  test("P109.2 — metadata bar shows round X/N, not round X/0", async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.goto("/debate");
+    await page.locator("textarea").first().fill(`P109.2 total_rounds test — ${Date.now()}`);
+    await page.locator("textarea").nth(1).fill("placeholder");
+
+    // Set max_rounds = 2 explicitly so we know what the expected display is.
+    const roundsInput = page.locator("input[type=number]").first();
+    await roundsInput.fill("2");
+
+    await page.getByRole("button", { name: /Start debate/i }).click();
+    await page.waitForURL(/\/debate\/debate-/, { timeout: 15_000 });
+
+    // After /status fetch lands (fired on debate_started), total_rounds
+    // should be 2. The metadata "round" cell should NOT say "0/0" or "X/0".
+    // It should show either "0/2" (pre-round-1) or "1/2" (mid debate) or
+    // "2/2" (terminal).
+    await expect(async () => {
+      const roundCell = page.locator("p:has-text('round')").first();
+      const sibling = roundCell.locator("xpath=following-sibling::p[1]");
+      const text = await sibling.textContent();
+      // Must NOT match "X/0" pattern. Must match "X/2".
+      if (!text || /\/0\s*$/.test(text) || !/\/2/.test(text)) {
+        throw new Error(`expected metadata round to be 'X/2', got '${text}'`);
+      }
+    }).toPass({ timeout: 30_000 });
+  });
 });

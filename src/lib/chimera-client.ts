@@ -39,9 +39,15 @@ export interface DebateState {
   debate_id: string;
   query: string;
   local_response?: string;
-  state: string; // "running" | "completed" | "failed" | "cancelled"
+  // P109.2: "degraded" is a real chimera terminal state for graceful
+  // fallback paths (chimera/api/debate/router.py:327). Naming all five so
+  // UI consumers don't have to grep the backend.
+  state: string; // "starting" | "running" | "completed" | "failed" | "cancelled" | "degraded"
   current_round: number;
-  total_rounds: number;
+  // P109.2: chimera doesn't emit `total_rounds` over SSE — populated lazily
+  // from GET /api/v1/debate/{id}/status (progress.total_rounds). undefined
+  // until the status fetch lands; UI must render "?" in that case.
+  total_rounds?: number;
   rounds: DebateRound[];
   models_used: string[];
   total_cost: number;
@@ -50,6 +56,20 @@ export interface DebateState {
   final_response?: string;
   improvements_made?: string[];
   constitutional_violations?: string[];
+}
+
+/** Shape returned by GET /api/v1/debate/{id}/status — thin progress view. */
+export interface DebateStatusProgress {
+  current_round?: number;
+  total_rounds?: number;
+  budget_used?: number;
+  budget_remaining?: number;
+}
+export interface DebateStatusResponse {
+  debate_id: string;
+  status: string;
+  progress?: DebateStatusProgress;
+  current_heat?: number;
 }
 
 /** Shape returned by GET /api/v1/debates/completed (verified live). */
@@ -111,8 +131,16 @@ export async function startDebate(req: StartDebateRequest): Promise<{ debate_id:
   });
 }
 
-export async function getDebateStatus(debateId: string): Promise<DebateState> {
-  return chimeraJson(`/api/v1/debate/${encodeURIComponent(debateId)}/status`);
+export async function getDebateStatus(
+  debateId: string
+): Promise<DebateStatusResponse> {
+  // P109.2: returns the thin progress view, NOT a full DebateState — chimera's
+  // /status endpoint only exposes {status, progress: {current_round,
+  // total_rounds, budget_*}, current_heat}. The full per-round state is
+  // accumulated from the SSE stream.
+  return chimeraJson<DebateStatusResponse>(
+    `/api/v1/debate/${encodeURIComponent(debateId)}/status`
+  );
 }
 
 export async function getDebateResult(debateId: string): Promise<DebateState> {

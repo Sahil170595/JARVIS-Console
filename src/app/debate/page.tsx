@@ -62,8 +62,10 @@ export default function DebateListPage() {
       });
       // Pass the query via URL so the viewer can render it immediately —
       // chimera's SSE events don't include the original query text.
+      // P109.2: also pass max_rounds (?r=) so the metadata bar can show
+      // "round X/N" deterministically without waiting on /status.
       router.push(
-        `/debate/${encodeURIComponent(debate_id)}?q=${encodeURIComponent(query)}`
+        `/debate/${encodeURIComponent(debate_id)}?q=${encodeURIComponent(query)}&r=${maxRounds}`
       );
     } catch (err) {
       setError(String(err));

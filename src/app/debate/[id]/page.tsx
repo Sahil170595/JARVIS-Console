@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   XCircle,
   Square,
+  AlertTriangle,
 } from "lucide-react";
 import { useDebateStream, StreamStatus } from "@/hooks/useDebateStream";
 import { DebateRoundCard } from "@/components/debate/DebateRoundCard";
@@ -29,6 +30,14 @@ function StatusDot({ status, state }: { status: StreamStatus; state?: string }) 
     return (
       <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
         <CheckCircle2 className="w-3.5 h-3.5" /> completed
+      </span>
+    );
+  // P109.2: graceful-degradation terminal state from chimera. Visually distinct
+  // from completed (amber, with warning icon) so the operator notices.
+  if (state === "degraded")
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-amber-400">
+        <AlertTriangle className="w-3.5 h-3.5" /> degraded
       </span>
     );
   if (state === "failed" || state === "cancelled")
@@ -65,7 +74,13 @@ export default function DebatePage() {
   // caller passes ?q=... (from form/list) or we render "Loading…" until the
   // user clicks back to the list.
   const queryFromUrl = searchParams?.get("q") ?? "";
-  const { state, status, error } = useDebateStream(id);
+  // P109.2: ?r= seeds state.total_rounds so the metadata bar shows "X/N"
+  // immediately. Falls back to /status fetch in the hook if absent (e.g.
+  // direct navigation to /debate/[id] without going through the form/list).
+  const rFromUrl = Number(searchParams?.get("r") ?? "");
+  const { state, status, error } = useDebateStream(id, {
+    initialTotalRounds: Number.isFinite(rFromUrl) && rFromUrl > 0 ? rFromUrl : undefined,
+  });
 
   const handleCancel = useCallback(async () => {
     if (!id) return;
@@ -77,10 +92,14 @@ export default function DebatePage() {
   }, [id]);
 
   const stateLabel = state?.state ?? "loading";
+  // P109.2: include `degraded` as a terminal state. Without it, the Cancel
+  // button stays rendered for already-finished-but-degraded debates and the
+  // StatusDot falls through to the muted "closed" branch.
   const terminal =
     state?.state === "completed" ||
     state?.state === "failed" ||
-    state?.state === "cancelled";
+    state?.state === "cancelled" ||
+    state?.state === "degraded";
 
   return (
     <div className="max-w-5xl mx-auto space-y-4">

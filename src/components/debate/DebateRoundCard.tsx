@@ -19,6 +19,9 @@ function fmtMs(ms: number): string {
 }
 
 function fmtCost(c: number): string {
+  // P109.2: chimera reports 0.0 for local Ollama; rendering "$0.00m"
+  // (millicents) looked broken. Treat exact zero as free and show "—".
+  if (c === 0) return "—";
   if (c < 0.001) return `$${(c * 1000).toFixed(2)}m`;
   return `$${c.toFixed(4)}`;
 }

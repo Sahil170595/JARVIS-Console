@@ -37,6 +37,7 @@ import {
   DebateRound,
   ModelResponse,
   debateStreamUrl,
+  getDebateStatus,
 } from "@/lib/chimera-client";
 
 export type StreamStatus = "idle" | "connecting" | "open" | "closed" | "error";
@@ -99,7 +100,9 @@ function emptyState(debateId: string): DebateState {
     query: "",
     state: "starting",
     current_round: 0,
-    total_rounds: 0,
+    // P109.2: undefined (not 0) so the UI can render "?" until /status fetch
+    // lands — chimera doesn't emit total_rounds in any SSE event.
+    total_rounds: undefined,
     rounds: [],
     models_used: [],
     total_cost: 0,
@@ -200,7 +203,19 @@ function applySetup(prev: DebateState, evt: SetupCompletePayload): DebateState {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useDebateStream(debateId: string | null) {
+export interface UseDebateStreamOptions {
+  /** P109.2: deterministic seed for state.total_rounds — pass when known
+   * upfront (e.g. from the form's max_rounds field) so the UI shows
+   * "round X/N" without waiting on /status. Falls back to the /status
+   * fetch on debate_started when absent. */
+  initialTotalRounds?: number;
+}
+
+export function useDebateStream(
+  debateId: string | null,
+  options: UseDebateStreamOptions = {}
+) {
+  const { initialTotalRounds } = options;
   const [state, setState] = useState<DebateState | null>(null);
   const [status, setStatus] = useState<StreamStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -208,7 +223,11 @@ export function useDebateStream(debateId: string | null) {
 
   useEffect(() => {
     if (!debateId) return;
-    setState(emptyState(debateId));
+    const seed = emptyState(debateId);
+    if (typeof initialTotalRounds === "number" && initialTotalRounds > 0) {
+      seed.total_rounds = initialTotalRounds;
+    }
+    setState(seed);
     setStatus("connecting");
     setError(null);
 
@@ -224,8 +243,23 @@ export function useDebateStream(debateId: string | null) {
       }
     };
 
+    // P109.2: on debate_started, fire a one-shot /status fetch to populate
+    // total_rounds (chimera doesn't emit it via SSE).
+    const fetchTotalRounds = async () => {
+      try {
+        const status = await getDebateStatus(debateId);
+        const tr = status.progress?.total_rounds;
+        if (typeof tr === "number" && tr > 0) {
+          setState((p) => (p ? { ...p, total_rounds: tr } : p));
+        }
+      } catch {
+        // Non-fatal — UI just keeps showing "?" for total_rounds.
+      }
+    };
+
     es.addEventListener("debate_started", () => {
       setState((p) => (p ? { ...p, state: "started" } : p));
+      fetchTotalRounds();
     });
 
     es.addEventListener("setup_complete", (e) => {
@@ -261,6 +295,10 @@ export function useDebateStream(debateId: string | null) {
     };
     es.addEventListener("debate_complete", onTerminal as EventListener);
     es.addEventListener("debate_failed", onTerminal as EventListener);
+    // P109.2: chimera also emits `debate_cancelled` (router.py:734, 1000)
+    // when /cancel hits a running debate. Without this listener the UI
+    // hangs in "live" state forever after a cancel.
+    es.addEventListener("debate_cancelled", onTerminal as EventListener);
 
     es.addEventListener("heartbeat", () => {
       /* keepalive — no-op */
@@ -268,11 +306,30 @@ export function useDebateStream(debateId: string | null) {
 
     es.onopen = () => setStatus("open");
     es.onerror = () => {
-      // EventSource fires onerror both on transient disconnects and on stream
-      // end. If we've already seen a terminal event, status is "closed" and
-      // we don't surface the error.
+      // EventSource fires onerror on transient disconnects (auto-reconnect
+      // pending) AND on stream end. P109.2: distinguish via readyState —
+      // CONNECTING means the browser is auto-retrying; don't surface as
+      // a hard error. CLOSED means the stream is gone; fall back to
+      // /status to reconcile final state.
+      const rs = es.readyState;
+      if (rs === EventSource.CONNECTING) {
+        // transient — keep status as-is, don't paint a red banner
+        return;
+      }
       setStatus((s) => (s === "closed" ? s : "error"));
       setError("SSE connection closed (debate may have ended)");
+      // Best-effort reconcile so the UI shows the real terminal state
+      // even when we missed the terminal event.
+      void (async () => {
+        try {
+          const status = await getDebateStatus(debateId);
+          if (status.status) {
+            setState((p) => (p ? { ...p, state: status.status } : p));
+          }
+        } catch {
+          /* keep the error banner */
+        }
+      })();
     };
 
     return () => {
