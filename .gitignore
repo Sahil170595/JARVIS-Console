@@ -5,3 +5,12 @@ out/
 .env.local
 *.tsbuildinfo
 next-env.d.ts
+
+# Playwright (P109.1 e2e suite)
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# session-local tooling
+.claude/

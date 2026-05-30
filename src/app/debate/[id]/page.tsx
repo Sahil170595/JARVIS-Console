@@ -11,7 +11,7 @@
  * Polish deferred — the user asked for feature parity first.
  */
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import {
   ArrowLeft,
@@ -59,7 +59,12 @@ function StatusDot({ status, state }: { status: StreamStatus; state?: string }) 
 export default function DebatePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params?.id ?? null;
+  // Chimera's SSE events don't carry the original query text. Either the
+  // caller passes ?q=... (from form/list) or we render "Loading…" until the
+  // user clicks back to the list.
+  const queryFromUrl = searchParams?.get("q") ?? "";
   const { state, status, error } = useDebateStream(id);
 
   const handleCancel = useCallback(async () => {
@@ -103,7 +108,7 @@ export default function DebatePage() {
               {id}
             </p>
             <h1 className="font-semibold text-lg break-words">
-              {state?.query ?? "Loading…"}
+              {queryFromUrl || state?.query || "Loading…"}
             </h1>
           </div>
           {!terminal && id && (

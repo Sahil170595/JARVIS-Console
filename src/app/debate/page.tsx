@@ -60,7 +60,11 @@ export default function DebateListPage() {
         max_rounds: maxRounds,
         budget_limit: budgetLimit,
       });
-      router.push(`/debate/${encodeURIComponent(debate_id)}`);
+      // Pass the query via URL so the viewer can render it immediately —
+      // chimera's SSE events don't include the original query text.
+      router.push(
+        `/debate/${encodeURIComponent(debate_id)}?q=${encodeURIComponent(query)}`
+      );
     } catch (err) {
       setError(String(err));
     } finally {
@@ -171,7 +175,11 @@ export default function DebateListPage() {
             {debates.map((d) => (
               <li key={d.debate_id}>
                 <button
-                  onClick={() => router.push(`/debate/${encodeURIComponent(d.debate_id)}`)}
+                  onClick={() =>
+                    router.push(
+                      `/debate/${encodeURIComponent(d.debate_id)}?q=${encodeURIComponent(d.query)}`
+                    )
+                  }
                   className="w-full text-left border border-border rounded-lg p-3 bg-card hover:border-primary/50 transition-colors"
                 >
                   <div className="flex items-center justify-between mb-1">
