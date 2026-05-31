@@ -1,0 +1,125 @@
+# P109.4 — Playwright e2e against a live chimera-backend in CI.
+#
+# The job spins up the chimera service from the sibling Banterpacks repo
+# via docker-compose, waits for /health, then runs the jarvis-console dev
+# server + Playwright suite. Local Ollama is NOT available in CI; chimera
+# falls back to a stub LLM path that still emits the full SSE event taxonomy
+# (debate_started → setup_complete → round_start → model_response →
+# round_complete → consensus → debate_complete).
+#
+# Trigger on push + PR. Skip on doc-only changes via `paths-ignore`.
+
+name: e2e
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "screenshots/**"
+      - "docs/**"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "screenshots/**"
+      - "docs/**"
+  workflow_dispatch:
+
+jobs:
+  playwright:
+    name: playwright (chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_CHIMERA_URL: http://localhost:8100
+      NEXT_PUBLIC_JARVIS_URL: http://localhost:8400
+      # Skip the chimera-LLM call path; demo_mode returns a fast canned
+      # response so the SSE event taxonomy fires without a real model.
+      CHIMERA_DEMO_MODE: "1"
+    steps:
+      - name: Checkout jarvis-console
+        uses: actions/checkout@v4
+        with:
+          path: jarvis-console
+
+      - name: Checkout Banterpacks (chimera backend)
+        uses: actions/checkout@v4
+        with:
+          repository: Sahil170595/Banterpacks
+          path: Banterpacks
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: jarvis-console/package-lock.json
+
+      - name: Install npm deps
+        working-directory: jarvis-console
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: jarvis-console
+        run: npx playwright install --with-deps chromium
+
+      - name: Bring up chimera-backend (docker compose)
+        working-directory: Banterpacks
+        run: |
+          docker compose -f docker/docker-compose.yml \
+            --profile ai --profile chimera \
+            up -d chimera-backend
+        env:
+          CHIMERA_DEMO_MODE: "1"
+
+      - name: Wait for chimera healthy (up to 90s)
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:8100/health >/dev/null; then
+              echo "chimera ready after ${i}s"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "chimera did not become healthy" >&2
+          docker compose -f Banterpacks/docker/docker-compose.yml logs chimera-backend
+          exit 1
+
+      - name: Start jarvis-console dev server
+        working-directory: jarvis-console
+        run: |
+          npm run dev > /tmp/jc-dev.log 2>&1 &
+          for i in {1..30}; do
+            if grep -q "Ready in" /tmp/jc-dev.log 2>/dev/null; then
+              echo "jarvis-console ready after ${i}s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "jarvis-console did not become ready" >&2
+          tail -50 /tmp/jc-dev.log
+          exit 1
+
+      - name: Run Playwright suite
+        working-directory: jarvis-console
+        run: npx playwright test debate.spec.ts --reporter=line
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: jarvis-console/test-results
+          retention-days: 7
+
+      - name: Dump chimera logs on failure
+        if: failure()
+        working-directory: Banterpacks
+        run: |
+          docker compose -f docker/docker-compose.yml logs chimera-backend | tail -200
+
+      - name: Tear down docker
+        if: always()
+        working-directory: Banterpacks
+        run: docker compose -f docker/docker-compose.yml down -v

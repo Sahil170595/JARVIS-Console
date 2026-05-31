@@ -38,17 +38,35 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
   const [wsConnected, setWsConnected] = useState(false);
   const wsRef = useRef<JarvisWebSocket | null>(null);
 
-  // Load key from localStorage on mount
+  // P109.4: moved jarvis-api-key from localStorage → sessionStorage. The audit
+  // flagged this as MEDIUM (pre-existing, not a P109 regression — but bundled
+  // into the same arc since we're already touching auth surfaces). Trade-off:
+  // user re-enters the key when they close all browser windows / restart the
+  // browser, in exchange for the key being scoped to the session and not
+  // surviving in disk-backed storage. For an operator console this is the
+  // right default. The Playwright e2e suite primes sessionStorage in
+  // beforeEach so tests are unaffected.
+  //
+  // Migration: on first load post-deploy, fall back to legacy localStorage
+  // once and copy it over, so users with an existing key don't get logged out.
   useEffect(() => {
-    const stored = localStorage.getItem("jarvis-api-key");
+    let stored = sessionStorage.getItem("jarvis-api-key");
+    if (!stored) {
+      const legacy = localStorage.getItem("jarvis-api-key");
+      if (legacy) {
+        sessionStorage.setItem("jarvis-api-key", legacy);
+        localStorage.removeItem("jarvis-api-key");
+        stored = legacy;
+      }
+    }
     if (stored) setApiKeyState(stored);
   }, []);
 
   const setApiKey = useCallback((key: string | null) => {
     if (key) {
-      localStorage.setItem("jarvis-api-key", key);
+      sessionStorage.setItem("jarvis-api-key", key);
     } else {
-      localStorage.removeItem("jarvis-api-key");
+      sessionStorage.removeItem("jarvis-api-key");
     }
     setApiKeyState(key);
   }, []);

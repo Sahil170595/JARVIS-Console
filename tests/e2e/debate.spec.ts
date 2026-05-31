@@ -26,11 +26,11 @@ async function waitForChimera(page: Page): Promise<void> {
 
 test.describe("debate viewer (P109.1)", () => {
   test.beforeEach(async ({ page }) => {
-    // Bypass the LoginDialog — jarvis-console requires an API key in
-    // localStorage.jarvis-api-key (default demo key configured in
-    // JARVIS_MASTER_KEYS env on the docker-compose stack).
+    // P109.4: jarvis-api-key now lives in sessionStorage (was localStorage).
+    // Prime both — sessionStorage is the source of truth; localStorage is
+    // checked once on first load for legacy migration.
     await page.addInitScript(() => {
-      window.localStorage.setItem("jarvis-api-key", "jarvis-demo-key");
+      window.sessionStorage.setItem("jarvis-api-key", "jarvis-demo-key");
     });
     await waitForChimera(page);
   });

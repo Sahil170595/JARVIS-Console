@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useDebateStream, StreamStatus } from "@/hooks/useDebateStream";
 import { DebateRoundCard } from "@/components/debate/DebateRoundCard";
+import { MarkdownText } from "@/components/debate/MarkdownText";
 import { cancelDebate } from "@/lib/chimera-client";
 
 function StatusDot({ status, state }: { status: StreamStatus; state?: string }) {
@@ -218,7 +219,9 @@ export default function DebatePage() {
       {state?.final_response && (
         <section className="border border-emerald-500/30 bg-emerald-500/5 rounded-xl p-5">
           <h2 className="font-semibold mb-2 text-emerald-300">Final response</h2>
-          <p className="text-sm whitespace-pre-wrap">{state.final_response}</p>
+          {/* P109.4: render as markdown — chimera emits **bold**, lists,
+              etc. in the final_response text. */}
+          <MarkdownText text={state.final_response} variant="panel" />
         </section>
       )}
 

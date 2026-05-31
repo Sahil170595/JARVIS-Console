@@ -12,6 +12,7 @@
 
 import { DebateRound, ModelResponse } from "@/lib/chimera-client";
 import { CheckCircle2, AlertCircle, Clock, DollarSign, Hash } from "lucide-react";
+import { MarkdownText } from "./MarkdownText";
 
 function fmtMs(ms: number): string {
   if (ms < 1000) return `${ms.toFixed(0)} ms`;
@@ -53,8 +54,10 @@ function ModelResponseRow({ resp }: { resp: ModelResponse }) {
         </div>
       </div>
 
-      <div className="text-sm text-foreground/90 whitespace-pre-wrap mb-2 max-h-40 overflow-y-auto">
-        {resp.response_text || (
+      <div className="text-sm mb-2 max-h-40 overflow-y-auto">
+        {resp.response_text ? (
+          <MarkdownText text={resp.response_text} variant="card" />
+        ) : (
           <span className="text-muted-foreground italic">(streaming…)</span>
         )}
       </div>

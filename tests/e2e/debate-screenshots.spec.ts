@@ -25,8 +25,9 @@ test.describe.configure({ mode: "serial" });
 
 test.describe("P109.1 screenshots", () => {
   test.beforeEach(async ({ page }) => {
+    // P109.4: sessionStorage (was localStorage) per audit recommendation.
     await page.addInitScript(() => {
-      window.localStorage.setItem("jarvis-api-key", "jarvis-demo-key");
+      window.sessionStorage.setItem("jarvis-api-key", "jarvis-demo-key");
     });
   });
 
