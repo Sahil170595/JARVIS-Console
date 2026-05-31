@@ -64,10 +64,16 @@ function ModelResponseRow({ resp }: { resp: ModelResponse }) {
           <Clock className="w-3 h-3" />
           {fmtMs(resp.processing_time_ms)}
         </span>
-        <span className="flex items-center gap-1" title="tokens">
-          <Hash className="w-3 h-3" />
-          {resp.tokens_used.toLocaleString()}
-        </span>
+        {/* P109.3: tokens_used only renders when > 0. Chimera's model_response
+            event currently doesn't emit token counts, so every row was showing
+            "#0" — misleading. When the backend starts emitting it (separate
+            patch), this branch lights up automatically. */}
+        {resp.tokens_used > 0 && (
+          <span className="flex items-center gap-1" title="tokens">
+            <Hash className="w-3 h-3" />
+            {resp.tokens_used.toLocaleString()}
+          </span>
+        )}
         <span className="flex items-center gap-1" title="cost">
           <DollarSign className="w-3 h-3" />
           {fmtCost(resp.cost)}

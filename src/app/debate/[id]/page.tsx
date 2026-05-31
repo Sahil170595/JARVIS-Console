@@ -12,7 +12,8 @@
  */
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { useToast } from "@/components/shared/Toast";
 import {
   ArrowLeft,
   CircleDot,
@@ -81,15 +82,41 @@ export default function DebatePage() {
   const { state, status, error } = useDebateStream(id, {
     initialTotalRounds: Number.isFinite(rFromUrl) && rFromUrl > 0 ? rFromUrl : undefined,
   });
+  const { success: toastSuccess, error: toastError, info: toastInfo } = useToast();
+
+  // P109.3: fire one toast per terminal state transition. Track which state
+  // we've already toasted so SSE replay (which re-emits the terminal event
+  // on the historical viewer mount) doesn't spam.
+  const toastedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const s = state?.state;
+    if (!s || toastedRef.current === s) return;
+    if (s === "completed") {
+      toastSuccess("Debate completed");
+      toastedRef.current = s;
+    } else if (s === "failed") {
+      toastError("Debate failed");
+      toastedRef.current = s;
+    } else if (s === "cancelled") {
+      toastInfo("Debate cancelled");
+      toastedRef.current = s;
+    } else if (s === "degraded") {
+      toastInfo("Debate completed (degraded — partial consensus)");
+      toastedRef.current = s;
+    }
+  }, [state?.state, toastSuccess, toastError, toastInfo]);
 
   const handleCancel = useCallback(async () => {
     if (!id) return;
     try {
       await cancelDebate(id);
+      toastInfo("Cancel request sent");
     } catch (err) {
+      const msg = String(err);
       console.warn("cancel failed:", err);
+      toastError(`Cancel failed: ${msg.slice(0, 120)}`);
     }
-  }, [id]);
+  }, [id, toastInfo, toastError]);
 
   const stateLabel = state?.state ?? "loading";
   // P109.2: include `degraded` as a terminal state. Without it, the Cancel

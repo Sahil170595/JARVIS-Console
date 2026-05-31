@@ -3,6 +3,7 @@ import "./globals.css";
 import { JarvisProvider } from "@/hooks/useJarvis";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { LoginDialog } from "@/components/shared/LoginDialog";
+import { ToastProvider } from "@/components/shared/Toast";
 
 export const metadata: Metadata = {
   title: "JARVIS Console",
@@ -18,9 +19,11 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body>
         <JarvisProvider>
-          <LoginDialog />
-          <Sidebar />
-          <main className="ml-16 min-h-screen p-6">{children}</main>
+          <ToastProvider>
+            <LoginDialog />
+            <Sidebar />
+            <main className="ml-16 min-h-screen p-6">{children}</main>
+          </ToastProvider>
         </JarvisProvider>
       </body>
     </html>

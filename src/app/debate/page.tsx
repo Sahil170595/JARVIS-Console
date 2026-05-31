@@ -10,15 +10,48 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Loader2, ExternalLink } from "lucide-react";
+import {
+  Play,
+  Loader2,
+  ExternalLink,
+  ChevronDown,
+  ChevronRight,
+  CircleDot,
+} from "lucide-react";
 import {
   DebateSummary,
   listCompletedDebates,
   startDebate,
 } from "@/lib/chimera-client";
+import { useToast } from "@/components/shared/Toast";
+import { useChimeraHealth, ChimeraHealth } from "@/hooks/useChimeraHealth";
+
+const AVAILABLE_MODELS = ["openai", "anthropic", "google", "ollama_local"];
+
+function HealthDot({ status }: { status: ChimeraHealth }) {
+  const color =
+    status === "healthy"
+      ? "text-emerald-400"
+      : status === "unreachable"
+      ? "text-rose-400"
+      : "text-muted-foreground";
+  return (
+    <span
+      title={`chimera-backend: ${status}`}
+      className={`inline-flex items-center gap-1 text-xs ${color}`}
+    >
+      <CircleDot
+        className={`w-3 h-3 ${status === "healthy" ? "animate-pulse" : ""}`}
+      />
+      chimera {status}
+    </span>
+  );
+}
 
 export default function DebateListPage() {
   const router = useRouter();
+  const { info: toastInfo, error: toastError } = useToast();
+  const health = useChimeraHealth();
   const [debates, setDebates] = useState<DebateSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -32,6 +65,23 @@ export default function DebateListPage() {
   );
   const [maxRounds, setMaxRounds] = useState(3);
   const [budgetLimit, setBudgetLimit] = useState(0.5);
+
+  // P109.3: Advanced Settings — temperature + thinking + selected_models.
+  // All optional; chimera DebateStartRequest accepts each.
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [temperature, setTemperature] = useState(0.7);
+  const [thinking, setThinking] = useState(false);
+  // P109.3: default to NO selected_models so chimera uses its own default
+  // routing (which is ollama_local in the local-only stack). Hard-coding
+  // ["openai","google"] previously forced the debate into the "degraded"
+  // fallback path on deployments without those API keys — silent UX bug.
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+
+  const toggleModel = useCallback((m: string) => {
+    setSelectedModels((prev) =>
+      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]
+    );
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -59,29 +109,46 @@ export default function DebateListPage() {
         local_response: localResponse,
         max_rounds: maxRounds,
         budget_limit: budgetLimit,
+        // P109.3 advanced settings — all optional in chimera schema
+        temperature,
+        thinking,
+        selected_models: selectedModels.length > 0 ? selectedModels : undefined,
       });
-      // Pass the query via URL so the viewer can render it immediately —
-      // chimera's SSE events don't include the original query text.
-      // P109.2: also pass max_rounds (?r=) so the metadata bar can show
-      // "round X/N" deterministically without waiting on /status.
+      toastInfo(`Debate ${debate_id.slice(0, 16)}… started`);
       router.push(
         `/debate/${encodeURIComponent(debate_id)}?q=${encodeURIComponent(query)}&r=${maxRounds}`
       );
     } catch (err) {
-      setError(String(err));
+      const msg = String(err);
+      setError(msg);
+      toastError(`Failed to start: ${msg.slice(0, 120)}`);
     } finally {
       setStarting(false);
     }
-  }, [query, localResponse, maxRounds, budgetLimit, router]);
+  }, [
+    query,
+    localResponse,
+    maxRounds,
+    budgetLimit,
+    temperature,
+    thinking,
+    selectedModels,
+    router,
+    toastInfo,
+    toastError,
+  ]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <header>
-        <h1 className="font-display text-2xl font-semibold">Debate</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Live multi-LLM constitutional debate viewer. Streams rounds from
-          chimera-backend; replaces the retired Tauri desktop app.
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-semibold">Debate</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Live multi-LLM constitutional debate viewer. Streams rounds from
+            chimera-backend.
+          </p>
+        </div>
+        <HealthDot status={health} />
       </header>
 
       <section className="border border-border rounded-xl p-5 bg-card space-y-3">
@@ -133,6 +200,77 @@ export default function DebateListPage() {
             />
           </label>
         </div>
+
+        {/* P109.3: Advanced Settings collapsible — temperature + thinking +
+            selected_models. All optional; chimera DebateStartRequest accepts
+            each. */}
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          {showAdvanced ? (
+            <ChevronDown className="w-3 h-3" />
+          ) : (
+            <ChevronRight className="w-3 h-3" />
+          )}
+          Advanced settings
+        </button>
+
+        {showAdvanced && (
+          <div className="space-y-3 border-l-2 border-border pl-3 ml-1">
+            <div>
+              <label className="text-xs text-muted-foreground flex items-center justify-between">
+                <span>Temperature</span>
+                <span className="font-mono">{temperature.toFixed(2)}</span>
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={2}
+                step={0.1}
+                value={temperature}
+                onChange={(e) => setTemperature(Number(e.target.value))}
+                className="w-full mt-1 accent-primary"
+              />
+            </div>
+
+            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={thinking}
+                onChange={(e) => setThinking(e.target.checked)}
+                className="accent-primary"
+              />
+              Enable thinking (verbose reasoning trace)
+            </label>
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">
+                Models ({selectedModels.length} selected — leave empty for chimera default)
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {AVAILABLE_MODELS.map((m) => {
+                  const active = selectedModels.includes(m);
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => toggleModel(m)}
+                      className={`text-xs px-2 py-1 rounded border font-mono ${
+                        active
+                          ? "border-primary/50 bg-primary/10 text-primary"
+                          : "border-border bg-card hover:border-primary/30"
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={handleStart}
