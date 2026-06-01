@@ -3,8 +3,12 @@ export const JARVIS_URL =
 
 export const JARVIS_WS_URL = JARVIS_URL.replace(/^http/, "ws");
 
-export const API_PREFIX = "/jarvis/v2";
-export const WS_PATH = "/jarvis/v2/stream";
+// P111.1: the JARVIS server mounts its router at `/jarvis` only (single mount
+// since P92.6 — `gateway/app.py:446` APIRouter(prefix="/jarvis"), WS at
+// `gateway/http.py:327` `/jarvis/stream`). The previous `/jarvis/v2` prefix
+// 404'd every call.
+export const API_PREFIX = "/jarvis";
+export const WS_PATH = "/jarvis/stream";
 
 export const HEALTH_POLL_INTERVAL = 10_000;
 export const WS_RECONNECT_BASE_MS = 1_000;

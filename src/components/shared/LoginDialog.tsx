@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useJarvis } from "@/hooks/useJarvis";
-import { JARVIS_URL } from "@/lib/constants";
+import { JARVIS_URL, API_PREFIX } from "@/lib/constants";
 
 export function LoginDialog() {
   const { apiKey, setApiKey } = useJarvis();
@@ -20,7 +20,7 @@ export function LoginDialog() {
     setError(null);
 
     try {
-      const res = await fetch(`${JARVIS_URL}/jarvis/v2/health`, {
+      const res = await fetch(`${JARVIS_URL}${API_PREFIX}/health`, {
         headers: { "X-Jarvis-Key": key },
       });
       if (res.ok) {
