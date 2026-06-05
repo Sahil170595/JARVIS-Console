@@ -10,13 +10,16 @@
   --card: 215 25% 8%;
   --card-foreground: 210 20% 90%;
   --primary: 210 100% 60%;
-  --primary-foreground: 0 0% 100%;
+  /* P117: dark fg on the bright primary (was white = 2.94:1, fails AA). Dark-on-
+     #3399ff is ~7:1. Keeps --primary light so text-primary stays readable on the
+     dark bg (darkening --primary instead would break blue-on-dark text links). */
+  --primary-foreground: 215 40% 9%;
   --accent: 170 80% 50%;
   --accent-foreground: 0 0% 100%;
   --muted: 215 20% 14%;
   --muted-foreground: 215 15% 55%;
   --border: 215 20% 16%;
-  --destructive: 0 72% 51%;
+  --destructive: 0 84% 67%; /* P117: lightened from 51% L so text-destructive meets WCAG AA (4.5:1) on the dark bg + faint destructive tints; only used as text/dots, no white-on-solid-red surface */
   --success: 142 72% 45%;
   --warning: 38 92% 50%;
 }
