@@ -189,8 +189,9 @@ test.describe("debate viewer (P109.1)", () => {
     // It should show either "0/2" (pre-round-1) or "1/2" (mid debate) or
     // "2/2" (terminal).
     await expect(async () => {
-      const roundCell = page.locator("p:has-text('round')").first();
-      const sibling = roundCell.locator("xpath=following-sibling::p[1]");
+      // P117: metadata grid is now a semantic <dl> (<dt>round</dt><dd>X/N</dd>).
+      const roundCell = page.locator("dt:has-text('round')").first();
+      const sibling = roundCell.locator("xpath=following-sibling::dd[1]");
       const text = await sibling.textContent();
       // Must NOT match "X/0" pattern. Must match "X/2".
       if (!text || /\/0\s*$/.test(text) || !/\/2/.test(text)) {

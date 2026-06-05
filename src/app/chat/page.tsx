@@ -44,18 +44,30 @@ export default function ChatPage() {
       <div className="flex-1 flex flex-col">
         <DisconnectedBanner />
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="max-w-4xl mx-auto space-y-4">
+        {/* role="log" marks this as a live chat transcript; aria-live="polite" + aria-atomic="false"
+            lets screen readers announce each new message without interrupting ongoing speech. */}
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-6 py-4"
+          role="log"
+          aria-live="polite"
+          aria-atomic="false"
+          aria-label="Chat messages"
+        >
+          <ul className="max-w-4xl mx-auto space-y-4 list-none">
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center py-20">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+              <li className="flex flex-col items-center justify-center h-full text-center py-20">
+                <div
+                  className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4"
+                  aria-hidden="true"
+                >
                   <span className="text-primary font-display font-bold text-2xl">J</span>
                 </div>
-                <h2 className="font-display font-semibold text-lg mb-1">JARVIS Console</h2>
+                <h1 className="font-display font-semibold text-lg mb-1">JARVIS Console</h1>
                 <p className="text-muted-foreground text-sm">
                   Send a message to start a conversation.
                 </p>
-              </div>
+              </li>
             )}
 
             {messages.map((msg) => (
@@ -65,7 +77,7 @@ export default function ChatPage() {
                 onApproveTool={approveTool}
               />
             ))}
-          </div>
+          </ul>
         </div>
 
         <ChatInput onSend={handleSend} disabled={!connected || sending} />

@@ -40,18 +40,25 @@ function ModelResponseRow({ resp }: { resp: ModelResponse }) {
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           {passes ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <CheckCircle2 aria-hidden="true" className="w-4 h-4 text-emerald-400 flex-shrink-0" />
           ) : (
-            <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-400 flex-shrink-0" />
           )}
           <span className="font-mono text-sm">{resp.model_id}</span>
+          <span className="sr-only">{passes ? "(alignment pass)" : "(alignment below threshold)"}</span>
         </div>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span title="alignment score" className={alignmentClass(resp.alignment_score)}>
-            align {resp.alignment_score.toFixed(3)}
-          </span>
-          <span title="confidence">conf {resp.confidence.toFixed(2)}</span>
-        </div>
+        <dl className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex gap-1">
+            <dt className="sr-only">Alignment score</dt>
+            <dd title="alignment score" className={alignmentClass(resp.alignment_score)}>
+              align {resp.alignment_score.toFixed(3)}
+            </dd>
+          </div>
+          <div className="flex gap-1">
+            <dt className="sr-only">Confidence</dt>
+            <dd title="confidence">conf {resp.confidence.toFixed(2)}</dd>
+          </div>
+        </dl>
       </div>
 
       <div className="text-sm mb-2 max-h-40 overflow-y-auto">
@@ -62,26 +69,29 @@ function ModelResponseRow({ resp }: { resp: ModelResponse }) {
         )}
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono">
-        <span className="flex items-center gap-1" title="latency">
-          <Clock className="w-3 h-3" />
-          {fmtMs(resp.processing_time_ms)}
-        </span>
+      <dl className="flex items-center gap-4 text-xs text-muted-foreground font-mono">
+        <div className="flex items-center gap-1">
+          <Clock aria-hidden="true" className="w-3 h-3" />
+          <dt className="sr-only">Latency</dt>
+          <dd>{fmtMs(resp.processing_time_ms)}</dd>
+        </div>
         {/* P109.3: tokens_used only renders when > 0. Chimera's model_response
             event currently doesn't emit token counts, so every row was showing
             "#0" — misleading. When the backend starts emitting it (separate
             patch), this branch lights up automatically. */}
         {resp.tokens_used > 0 && (
-          <span className="flex items-center gap-1" title="tokens">
-            <Hash className="w-3 h-3" />
-            {resp.tokens_used.toLocaleString()}
-          </span>
+          <div className="flex items-center gap-1">
+            <Hash aria-hidden="true" className="w-3 h-3" />
+            <dt className="sr-only">Tokens used</dt>
+            <dd>{resp.tokens_used.toLocaleString()}</dd>
+          </div>
         )}
-        <span className="flex items-center gap-1" title="cost">
-          <DollarSign className="w-3 h-3" />
-          {fmtCost(resp.cost)}
-        </span>
-      </div>
+        <div className="flex items-center gap-1">
+          <DollarSign aria-hidden="true" className="w-3 h-3" />
+          <dt className="sr-only">Cost</dt>
+          <dd>{fmtCost(resp.cost)}</dd>
+        </div>
+      </dl>
     </div>
   );
 }
@@ -98,6 +108,7 @@ export function DebateRoundCard({ round }: { round: DebateRound }) {
         </h3>
         {typeof round.consensus_score === "number" && (
           <div className="text-sm font-mono">
+            <span className="sr-only">Consensus score: </span>
             consensus{" "}
             <span className={alignmentClass(round.consensus_score)}>
               {round.consensus_score.toFixed(3)}

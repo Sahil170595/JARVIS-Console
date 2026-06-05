@@ -25,6 +25,7 @@ import {
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 export type ToastKind = "info" | "success" | "error";
 
@@ -102,17 +103,23 @@ function ToastStack({
   toasts: Toast[];
   onDismiss: (id: number) => void;
 }) {
+  const reduced = useReducedMotion();
   return (
-    <div className="fixed bottom-4 right-4 z-[200] flex flex-col-reverse gap-2 max-w-sm pointer-events-none">
+    <div
+      role="region"
+      aria-label="Notifications"
+      className="fixed bottom-4 right-4 z-[200] flex flex-col-reverse gap-2 max-w-sm pointer-events-none"
+    >
       <AnimatePresence>
         {toasts.map((t) => (
           <motion.div
             key={t.id}
+            role={t.kind === "error" ? "alert" : "status"}
             layout
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            initial={reduced ? false : { opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: reduced ? 0 : 0.18, ease: "easeOut" }}
             className={`pointer-events-auto flex items-start gap-2 rounded-lg border p-3 backdrop-blur-md ${
               t.kind === "success"
                 ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
@@ -122,19 +129,19 @@ function ToastStack({
             }`}
           >
             {t.kind === "success" ? (
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 aria-hidden="true" className="w-4 h-4 flex-shrink-0 mt-0.5" />
             ) : t.kind === "error" ? (
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <AlertCircle aria-hidden="true" className="w-4 h-4 flex-shrink-0 mt-0.5" />
             ) : (
-              <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <Info aria-hidden="true" className="w-4 h-4 flex-shrink-0 mt-0.5" />
             )}
             <span className="text-sm flex-1 break-words">{t.text}</span>
             <button
               onClick={() => onDismiss(t.id)}
-              className="text-muted-foreground hover:text-foreground"
-              aria-label="dismiss"
+              className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+              aria-label="Dismiss notification"
             >
-              <X className="w-3.5 h-3.5" />
+              <X aria-hidden="true" className="w-3.5 h-3.5" />
             </button>
           </motion.div>
         ))}

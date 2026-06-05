@@ -21,9 +21,22 @@ export function ConnectionBadge() {
   const Icon = connected ? Wifi : WifiOff;
 
   return (
-    <div className="flex flex-col items-center gap-1" title={label}>
-      <Icon size={16} className={connected ? "text-success" : "text-destructive"} />
-      <div className={`w-2 h-2 rounded-full ${color} ${!connected ? "animate-pulse-slow" : ""}`} />
+    <div
+      className="flex flex-col items-center gap-1"
+      role="status"
+      aria-label={`Connection status: ${label}`}
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <Icon
+        size={16}
+        className={connected ? "text-success" : "text-destructive"}
+        aria-hidden="true"
+      />
+      <div
+        className={`w-2 h-2 rounded-full ${color} ${!connected ? "animate-pulse-slow" : ""}`}
+        aria-hidden="true"
+      />
     </div>
   );
 }

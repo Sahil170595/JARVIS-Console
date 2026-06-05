@@ -2,6 +2,7 @@
 
 import { useJarvis } from "@/hooks/useJarvis";
 import { usePolling } from "@/hooks/usePolling";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { DisconnectedBanner } from "@/components/shared/DisconnectedBanner";
 import { Badge } from "@/components/shared/Badge";
 import { Spinner } from "@/components/shared/Spinner";
@@ -17,6 +18,7 @@ const RISK_VARIANT: Record<string, "success" | "warning" | "destructive"> = {
 
 export default function ToolsPage() {
   const { client } = useJarvis();
+  const reducedMotion = useReducedMotion();
 
   const { data, loading } = usePolling<{ tools: Tool[] }>(
     () => client!.getTools(),
@@ -26,18 +28,23 @@ export default function ToolsPage() {
   return (
     <div>
       <h1 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
-        <Wrench size={20} className="text-primary" /> Tool Catalog
+        <Wrench size={20} className="text-primary" aria-hidden="true" /> Tool Catalog
       </h1>
       <DisconnectedBanner />
 
       {loading ? (
-        <Spinner />
+        <div aria-live="polite">
+          <Spinner />
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <ul
+          role="list"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
           {(data?.tools || []).map((t) => (
-            <div
+            <li
               key={t.name}
-              className="bg-card border border-border rounded-xl p-5 animate-fade-in"
+              className={`bg-card border border-border rounded-xl p-5${reducedMotion ? "" : " animate-fade-in"}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="font-mono font-medium text-sm">{t.name}</span>
@@ -59,9 +66,9 @@ export default function ToolsPage() {
                   </span>
                 ))}
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

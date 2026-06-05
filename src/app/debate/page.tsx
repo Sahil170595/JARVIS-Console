@@ -25,10 +25,12 @@ import {
 } from "@/lib/chimera-client";
 import { useToast } from "@/components/shared/Toast";
 import { useChimeraHealth, ChimeraHealth } from "@/hooks/useChimeraHealth";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const AVAILABLE_MODELS = ["openai", "anthropic", "google", "ollama_local"];
 
 function HealthDot({ status }: { status: ChimeraHealth }) {
+  const reducedMotion = useReducedMotion();
   const color =
     status === "healthy"
       ? "text-emerald-400"
@@ -37,11 +39,13 @@ function HealthDot({ status }: { status: ChimeraHealth }) {
       : "text-muted-foreground";
   return (
     <span
+      role="status"
       title={`chimera-backend: ${status}`}
       className={`inline-flex items-center gap-1 text-xs ${color}`}
     >
       <CircleDot
-        className={`w-3 h-3 ${status === "healthy" ? "animate-pulse" : ""}`}
+        aria-hidden="true"
+        className={`w-3 h-3 ${status === "healthy" && !reducedMotion ? "animate-pulse" : ""}`}
       />
       chimera {status}
     </span>
@@ -155,48 +159,66 @@ export default function DebateListPage() {
         <h2 className="font-semibold">Start a new debate</h2>
 
         <div>
-          <label className="text-xs text-muted-foreground block mb-1">Query</label>
+          <label
+            htmlFor="debate-query"
+            className="text-xs text-muted-foreground block mb-1"
+          >
+            Query
+          </label>
           <textarea
+            id="debate-query"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             rows={2}
-            className="w-full bg-background border border-border rounded px-3 py-2 text-sm font-mono"
+            className="w-full bg-background border border-border rounded px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           />
         </div>
 
         <div>
-          <label className="text-xs text-muted-foreground block mb-1">
+          <label
+            htmlFor="debate-local-response"
+            className="text-xs text-muted-foreground block mb-1"
+          >
             Local (non-debate) response — what chimera should improve on
           </label>
           <textarea
+            id="debate-local-response"
             value={localResponse}
             onChange={(e) => setLocalResponse(e.target.value)}
             rows={2}
-            className="w-full bg-background border border-border rounded px-3 py-2 text-sm font-mono"
+            className="w-full bg-background border border-border rounded px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           />
         </div>
 
         <div className="flex gap-3">
-          <label className="text-xs text-muted-foreground flex flex-col flex-1">
+          <label
+            htmlFor="debate-max-rounds"
+            className="text-xs text-muted-foreground flex flex-col flex-1"
+          >
             Max rounds
             <input
+              id="debate-max-rounds"
               type="number"
               min={1}
               max={7}
               value={maxRounds}
               onChange={(e) => setMaxRounds(Number(e.target.value))}
-              className="bg-background border border-border rounded px-3 py-2 text-sm font-mono mt-1"
+              className="bg-background border border-border rounded px-3 py-2 text-sm font-mono mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             />
           </label>
-          <label className="text-xs text-muted-foreground flex flex-col flex-1">
+          <label
+            htmlFor="debate-budget-limit"
+            className="text-xs text-muted-foreground flex flex-col flex-1"
+          >
             Budget limit (USD)
             <input
+              id="debate-budget-limit"
               type="number"
               step={0.1}
               min={0.1}
               value={budgetLimit}
               onChange={(e) => setBudgetLimit(Number(e.target.value))}
-              className="bg-background border border-border rounded px-3 py-2 text-sm font-mono mt-1"
+              className="bg-background border border-border rounded px-3 py-2 text-sm font-mono mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             />
           </label>
         </div>
@@ -206,58 +228,76 @@ export default function DebateListPage() {
             each. */}
         <button
           type="button"
+          aria-expanded={showAdvanced}
+          aria-controls="advanced-settings-panel"
           onClick={() => setShowAdvanced((v) => !v)}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
         >
           {showAdvanced ? (
-            <ChevronDown className="w-3 h-3" />
+            <ChevronDown aria-hidden="true" className="w-3 h-3" />
           ) : (
-            <ChevronRight className="w-3 h-3" />
+            <ChevronRight aria-hidden="true" className="w-3 h-3" />
           )}
           Advanced settings
         </button>
 
         {showAdvanced && (
-          <div className="space-y-3 border-l-2 border-border pl-3 ml-1">
+          <div
+            id="advanced-settings-panel"
+            className="space-y-3 border-l-2 border-border pl-3 ml-1"
+          >
             <div>
-              <label className="text-xs text-muted-foreground flex items-center justify-between">
+              <label
+                htmlFor="debate-temperature"
+                className="text-xs text-muted-foreground flex items-center justify-between"
+              >
                 <span>Temperature</span>
-                <span className="font-mono">{temperature.toFixed(2)}</span>
+                <span className="font-mono" aria-live="polite">{temperature.toFixed(2)}</span>
               </label>
               <input
+                id="debate-temperature"
                 type="range"
                 min={0}
                 max={2}
                 step={0.1}
                 value={temperature}
                 onChange={(e) => setTemperature(Number(e.target.value))}
-                className="w-full mt-1 accent-primary"
+                className="w-full mt-1 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
               />
             </div>
 
-            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+            <label
+              htmlFor="debate-thinking"
+              className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer"
+            >
               <input
+                id="debate-thinking"
                 type="checkbox"
                 checked={thinking}
                 onChange={(e) => setThinking(e.target.checked)}
-                className="accent-primary"
+                className="accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
               Enable thinking (verbose reasoning trace)
             </label>
 
             <div>
-              <p className="text-xs text-muted-foreground mb-1">
+              <p id="models-label" className="text-xs text-muted-foreground mb-1">
                 Models ({selectedModels.length} selected — leave empty for chimera default)
               </p>
-              <div className="flex flex-wrap gap-1.5">
+              <div
+                role="group"
+                aria-labelledby="models-label"
+                className="flex flex-wrap gap-1.5"
+              >
                 {AVAILABLE_MODELS.map((m) => {
                   const active = selectedModels.includes(m);
                   return (
                     <button
                       key={m}
                       type="button"
+                      aria-pressed={active}
                       onClick={() => toggleModel(m)}
-                      className={`text-xs px-2 py-1 rounded border font-mono ${
+                      className={`text-xs px-2 py-1 rounded border font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                         active
                           ? "border-primary/50 bg-primary/10 text-primary"
                           : "border-border bg-card hover:border-primary/30"
@@ -273,32 +313,37 @@ export default function DebateListPage() {
         )}
 
         <button
+          type="button"
           onClick={handleStart}
           disabled={starting || !query.trim()}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           {starting ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" /> Starting…
+              <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />
+              <span>Starting…</span>
             </>
           ) : (
             <>
-              <Play className="w-4 h-4" /> Start debate
+              <Play aria-hidden="true" className="w-4 h-4" />
+              <span>Start debate</span>
             </>
           )}
         </button>
 
         {error && (
-          <p className="text-xs text-rose-400 font-mono break-all">{error}</p>
+          <p role="alert" className="text-xs text-rose-400 font-mono break-all">{error}</p>
         )}
       </section>
 
-      <section className="space-y-2">
+      <section className="space-y-2" aria-busy={loading}>
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Completed debates</h2>
           <button
+            type="button"
             onClick={refresh}
-            className="text-xs text-muted-foreground hover:text-foreground"
+            aria-label={loading ? "Refreshing debates list" : "Refresh debates list"}
+            className="text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
           >
             {loading ? "Refreshing…" : "Refresh"}
           </button>
@@ -315,18 +360,20 @@ export default function DebateListPage() {
             {debates.map((d) => (
               <li key={d.debate_id}>
                 <button
+                  type="button"
                   onClick={() =>
                     router.push(
                       `/debate/${encodeURIComponent(d.debate_id)}?q=${encodeURIComponent(d.query)}`
                     )
                   }
-                  className="w-full text-left border border-border rounded-lg p-3 bg-card hover:border-primary/50 transition-colors"
+                  aria-label={`Open debate: ${d.query.slice(0, 80)}`}
+                  className="w-full text-left border border-border rounded-lg p-3 bg-card hover:border-primary/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-mono text-xs text-muted-foreground">
                       {d.debate_id.slice(0, 12)}…
                     </span>
-                    <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                    <ExternalLink aria-hidden="true" className="w-3 h-3 text-muted-foreground" />
                   </div>
                   <p className="text-sm truncate">{d.query}</p>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 font-mono">

@@ -9,12 +9,16 @@ const VARIANTS: Record<string, string> = {
 interface BadgeProps {
   label: string;
   variant?: keyof typeof VARIANTS;
+  /** Optional accessible label override; defaults to `label`. Use when the
+   *  visible text is abbreviated and a fuller description aids AT users. */
+  "aria-label"?: string;
 }
 
-export function Badge({ label, variant = "muted" }: BadgeProps) {
+export function Badge({ label, variant = "muted", "aria-label": ariaLabel }: BadgeProps) {
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${VARIANTS[variant] || VARIANTS.muted}`}
+      aria-label={ariaLabel}
     >
       {label}
     </span>

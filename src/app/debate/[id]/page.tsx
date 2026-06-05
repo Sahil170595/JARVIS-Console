@@ -26,43 +26,49 @@ import { useDebateStream, StreamStatus } from "@/hooks/useDebateStream";
 import { DebateRoundCard } from "@/components/debate/DebateRoundCard";
 import { MarkdownText } from "@/components/debate/MarkdownText";
 import { cancelDebate } from "@/lib/chimera-client";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 function StatusDot({ status, state }: { status: StreamStatus; state?: string }) {
+  const reducedMotion = useReducedMotion();
   if (state === "completed")
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
-        <CheckCircle2 className="w-3.5 h-3.5" /> completed
+      <span role="status" className="inline-flex items-center gap-1 text-xs text-emerald-400">
+        <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5" /> completed
       </span>
     );
   // P109.2: graceful-degradation terminal state from chimera. Visually distinct
   // from completed (amber, with warning icon) so the operator notices.
   if (state === "degraded")
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-amber-400">
-        <AlertTriangle className="w-3.5 h-3.5" /> degraded
+      <span role="status" className="inline-flex items-center gap-1 text-xs text-amber-400">
+        <AlertTriangle aria-hidden="true" className="w-3.5 h-3.5" /> degraded
       </span>
     );
   if (state === "failed" || state === "cancelled")
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-rose-400">
-        <XCircle className="w-3.5 h-3.5" /> {state}
+      <span role="status" className="inline-flex items-center gap-1 text-xs text-rose-400">
+        <XCircle aria-hidden="true" className="w-3.5 h-3.5" /> {state}
       </span>
     );
   if (status === "open")
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
-        <CircleDot className="w-3.5 h-3.5 animate-pulse" /> live
+      <span role="status" className="inline-flex items-center gap-1 text-xs text-emerald-400">
+        <CircleDot
+          aria-hidden="true"
+          className={`w-3.5 h-3.5 ${reducedMotion ? "" : "animate-pulse"}`}
+        />{" "}
+        live
       </span>
     );
   if (status === "error")
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-rose-400">
-        <XCircle className="w-3.5 h-3.5" /> error
+      <span role="status" className="inline-flex items-center gap-1 text-xs text-rose-400">
+        <XCircle aria-hidden="true" className="w-3.5 h-3.5" /> error
       </span>
     );
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-      <CircleDot className="w-3.5 h-3.5" /> {status}
+    <span role="status" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+      <CircleDot aria-hidden="true" className="w-3.5 h-3.5" /> {status}
     </span>
   );
 }
@@ -133,17 +139,22 @@ export default function DebatePage() {
     <div className="max-w-5xl mx-auto space-y-4">
       <header className="flex items-center justify-between">
         <button
+          type="button"
           onClick={() => router.push("/debate")}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          aria-label="Back to all debates"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft aria-hidden="true" className="w-4 h-4" />
           All debates
         </button>
         <StatusDot status={status} state={state?.state} />
       </header>
 
       {error && (
-        <div className="border border-rose-500/40 bg-rose-500/10 rounded-lg p-3 text-sm text-rose-300 font-mono">
+        <div
+          role="alert"
+          className="border border-rose-500/40 bg-rose-500/10 rounded-lg p-3 text-sm text-rose-300 font-mono"
+        >
           {error}
         </div>
       )}
@@ -160,48 +171,58 @@ export default function DebatePage() {
           </div>
           {!terminal && id && (
             <button
+              type="button"
               onClick={handleCancel}
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-border rounded hover:border-rose-500/50 hover:text-rose-400"
+              aria-label="Cancel this debate"
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-border rounded hover:border-rose-500/50 hover:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <Square className="w-3 h-3" /> Cancel
+              <Square aria-hidden="true" className="w-3 h-3" /> Cancel
             </button>
           )}
         </div>
 
         {state?.local_response && (
           <div className="mb-3">
-            <p className="text-xs text-muted-foreground mb-1">
+            <p className="text-xs text-muted-foreground mb-1" id="local-response-label">
               Local (pre-debate) response
             </p>
-            <p className="text-sm bg-background/50 border border-border rounded p-2 font-mono">
+            <p
+              aria-labelledby="local-response-label"
+              className="text-sm bg-background/50 border border-border rounded p-2 font-mono"
+            >
               {state.local_response}
             </p>
           </div>
         )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+        <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
           <div>
-            <p className="text-muted-foreground">state</p>
-            <p>{stateLabel}</p>
+            <dt className="text-muted-foreground">state</dt>
+            <dd>{stateLabel}</dd>
           </div>
           <div>
-            <p className="text-muted-foreground">round</p>
-            <p>
+            <dt className="text-muted-foreground">round</dt>
+            <dd>
               {state?.current_round ?? 0}/{state?.total_rounds ?? "?"}
-            </p>
+            </dd>
           </div>
           <div>
-            <p className="text-muted-foreground">consensus</p>
-            <p>{state?.consensus_score?.toFixed(3) ?? "—"}</p>
+            <dt className="text-muted-foreground">consensus</dt>
+            <dd>{state?.consensus_score?.toFixed(3) ?? "—"}</dd>
           </div>
           <div>
-            <p className="text-muted-foreground">total cost</p>
-            <p>${state?.total_cost?.toFixed(4) ?? "—"}</p>
+            <dt className="text-muted-foreground">total cost</dt>
+            <dd>${state?.total_cost?.toFixed(4) ?? "—"}</dd>
           </div>
-        </div>
+        </dl>
       </section>
 
-      <section className="space-y-3">
+      <section
+        aria-label="Debate rounds"
+        aria-live="polite"
+        aria-atomic="false"
+        className="space-y-3"
+      >
         {!state || state.rounds.length === 0 ? (
           <p className="text-sm text-muted-foreground italic">
             Waiting for first round…

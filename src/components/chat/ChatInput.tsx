@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useCallback } from "react";
 import { Send } from "lucide-react";
@@ -30,7 +30,12 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   return (
     <div className="border-t border-border bg-card p-4">
       <div className="flex gap-3 items-end max-w-4xl mx-auto">
+        {/* sr-only label associates visible placeholder context with the textarea for screen readers */}
+        <label htmlFor="chat-input" className="sr-only">
+          Message JARVIS
+        </label>
         <textarea
+          id="chat-input"
           ref={inputRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -38,14 +43,15 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           placeholder={disabled ? "Reconnecting..." : "Message JARVIS..."}
           disabled={disabled}
           rows={1}
-          className="flex-1 bg-muted border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none text-sm disabled:opacity-50"
+          className="flex-1 bg-muted border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary resize-none text-sm disabled:opacity-50"
         />
         <button
           onClick={handleSend}
           disabled={disabled || !text.trim()}
-          className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+          aria-label="Send message"
+          className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          <Send size={16} />
+          <Send size={16} aria-hidden="true" />
         </button>
       </div>
     </div>

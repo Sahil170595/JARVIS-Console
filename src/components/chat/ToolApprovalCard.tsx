@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import type { ToolRunInfo } from "@/hooks/useChat";
 import { Shield, Check, X, Loader2, AlertTriangle } from "lucide-react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface ToolApprovalCardProps {
   toolRun: ToolRunInfo;
@@ -17,12 +18,17 @@ const RISK_COLORS: Record<string, string> = {
 
 export function ToolApprovalCard({ toolRun, onApprove }: ToolApprovalCardProps) {
   const riskStyle = RISK_COLORS[toolRun.riskTier] || RISK_COLORS.low;
+  const reducedMotion = useReducedMotion();
 
   return (
-    <div className={`mt-2 rounded-lg border p-3 text-sm ${riskStyle} animate-slide-up`}>
+    <div
+      role="group"
+      aria-label={`Tool approval: ${toolRun.toolName} — ${toolRun.riskTier} risk`}
+      className={`mt-2 rounded-lg border p-3 text-sm ${riskStyle} ${reducedMotion ? "" : "animate-slide-up"}`}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Shield size={14} />
+          <Shield size={14} aria-hidden="true" />
           <span className="font-mono font-medium">{toolRun.toolName}</span>
           <span className="text-xs opacity-70">{toolRun.riskTier}</span>
         </div>
@@ -30,22 +36,23 @@ export function ToolApprovalCard({ toolRun, onApprove }: ToolApprovalCardProps) 
         {toolRun.status === "approval_required" && onApprove && (
           <button
             onClick={() => onApprove(toolRun.toolRunId)}
-            className="flex items-center gap-1 bg-success/20 text-success px-2.5 py-1 rounded-md text-xs font-medium hover:bg-success/30 transition-colors"
+            aria-label={`Approve tool: ${toolRun.toolName}`}
+            className="flex items-center gap-1 bg-success/20 text-success px-2.5 py-1 rounded-md text-xs font-medium hover:bg-success/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
-            <Check size={12} /> Approve
+            <Check size={12} aria-hidden="true" /> Approve
           </button>
         )}
 
         {toolRun.status === "executing" && (
-          <Loader2 size={14} className="animate-spin opacity-70" />
+          <Loader2 size={14} className={`${reducedMotion ? "" : "animate-spin"} opacity-70`} aria-hidden="true" />
         )}
 
         {toolRun.status === "completed" && (
-          <Check size={14} className="text-success" />
+          <Check size={14} className="text-success" aria-hidden="true" />
         )}
 
         {toolRun.status === "failed" && (
-          <X size={14} className="text-destructive" />
+          <X size={14} className="text-destructive" aria-hidden="true" />
         )}
       </div>
 
@@ -57,7 +64,7 @@ export function ToolApprovalCard({ toolRun, onApprove }: ToolApprovalCardProps) 
 
       {toolRun.warnings?.map((w, i) => (
         <div key={i} className="mt-2 flex items-start gap-1.5 text-xs">
-          <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+          <AlertTriangle size={12} className="shrink-0 mt-0.5" aria-hidden="true" />
           <span>{w}</span>
         </div>
       ))}

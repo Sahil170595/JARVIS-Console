@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import type { ChatMessage, ToolRunInfo } from "@/hooks/useChat";
 import { ToolApprovalCard } from "./ToolApprovalCard";
 import { User, Bot } from "lucide-react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -11,12 +12,18 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message, onApproveTool }: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const reducedMotion = useReducedMotion();
 
   return (
-    <div className={`flex gap-3 animate-fade-in ${isUser ? "justify-end" : ""}`}>
+    <li
+      className={`flex gap-3 ${reducedMotion ? "" : "animate-fade-in"} ${isUser ? "justify-end" : ""}`}
+    >
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-1">
-          <Bot size={16} className="text-primary" />
+        <div
+          className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-1"
+          aria-hidden="true"
+        >
+          <Bot size={16} className="text-primary" aria-hidden="true" />
         </div>
       )}
 
@@ -30,7 +37,11 @@ export function MessageBubble({ message, onApproveTool }: MessageBubbleProps) {
         >
           <p className="whitespace-pre-wrap">{message.content}</p>
           {message.isStreaming && (
-            <span className="inline-block w-1.5 h-4 bg-primary/60 animate-pulse ml-0.5 align-text-bottom" />
+            <span
+              role="status"
+              aria-label="JARVIS is typing"
+              className={`inline-block w-1.5 h-4 bg-primary/60 ${reducedMotion ? "opacity-60" : "animate-pulse"} ml-0.5 align-text-bottom`}
+            />
           )}
         </div>
 
@@ -44,10 +55,13 @@ export function MessageBubble({ message, onApproveTool }: MessageBubbleProps) {
       </div>
 
       {isUser && (
-        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-1">
-          <User size={16} className="text-muted-foreground" />
+        <div
+          className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-1"
+          aria-hidden="true"
+        >
+          <User size={16} className="text-muted-foreground" aria-hidden="true" />
         </div>
       )}
-    </div>
+    </li>
   );
 }

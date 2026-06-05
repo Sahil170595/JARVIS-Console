@@ -28,21 +28,25 @@ export default function WorkflowsPage() {
   return (
     <div>
       <h1 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
-        <GitBranch size={20} className="text-primary" /> Workflows
+        <GitBranch size={20} className="text-primary" aria-hidden="true" /> Workflows
       </h1>
       <DisconnectedBanner />
 
       {loading ? (
         <Spinner />
       ) : (data?.workflows || []).length ? (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+        <div
+          className="bg-card border border-border rounded-xl overflow-hidden"
+          aria-live="polite"
+          aria-atomic="false"
+        >
+          <table className="w-full text-sm" aria-label="Workflows">
             <thead>
               <tr className="border-b border-border text-muted-foreground text-left">
-                <th className="px-4 py-3 font-medium">Title</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Origin</th>
-                <th className="px-4 py-3 font-medium">Created</th>
+                <th scope="col" className="px-4 py-3 font-medium">Title</th>
+                <th scope="col" className="px-4 py-3 font-medium">Status</th>
+                <th scope="col" className="px-4 py-3 font-medium">Origin</th>
+                <th scope="col" className="px-4 py-3 font-medium">Created</th>
               </tr>
             </thead>
             <tbody>
@@ -54,7 +58,7 @@ export default function WorkflowsPage() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/workflows/${w.workflow_id}`}
-                      className="text-primary hover:underline"
+                      className="text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
                     >
                       {w.title || w.workflow_id.slice(0, 12)}
                     </Link>
@@ -67,7 +71,7 @@ export default function WorkflowsPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{w.origin}</td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {new Date(w.created_at).toLocaleString()}
+                    <time dateTime={w.created_at}>{new Date(w.created_at).toLocaleString()}</time>
                   </td>
                 </tr>
               ))}
@@ -75,7 +79,7 @@ export default function WorkflowsPage() {
           </table>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">No workflows yet.</p>
+        <p className="text-sm text-muted-foreground" role="status">No workflows yet.</p>
       )}
     </div>
   );
